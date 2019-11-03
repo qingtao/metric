@@ -66,14 +66,17 @@ func main() {
 	}
 	sort.Float64s(dis)
 	since := time.Since(cur)
-	fmt.Println("direct:", since.String())
+	fmt.Println("direct(遍历):", since.String())
 	for i := 0; i < 5; i++ {
 		fmt.Println(dis[i])
 	}
+	cur = time.Now()
 	t, err := vptree.New(f, 5, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
+	since = time.Since(cur)
+	fmt.Println("vptree(生成树时间):", since.String())
 	dis = dis[:0]
 	cur = time.Now()
 	t.Do(func(c vptree.Comparable, i int) (done bool) {
@@ -83,7 +86,7 @@ func main() {
 		return
 	})
 	since = time.Since(cur)
-	fmt.Println("vptree:", since.String())
+	fmt.Println("vptree(查询时间):", since.String())
 	sort.Float64s(dis)
 	for i := 0; i < 5 && i < len(dis); i++ {
 		fmt.Println(dis[i])
@@ -131,12 +134,13 @@ func directMultiCPU(f []vptree.Comparable, p co) []float64 {
 	wg.Wait()
 	close(c)
 	since := time.Since(cur)
-	fmt.Println("direct with multi cpu", since.String())
+	fmt.Println("direct(多核cpu遍历):", since.String())
 	sort.Float64s(dis)
 	return dis
 }
 
 func vptreeMultiCPU(f []vptree.Comparable, p co) []float64 {
+	cur := time.Now()
 	n := runtime.NumCPU()
 	// n := 16
 	step := len(f) / n
@@ -156,7 +160,9 @@ func vptreeMultiCPU(f []vptree.Comparable, p co) []float64 {
 		}
 		ts[i] = t
 	}
-	cur := time.Now()
+	since := time.Since(cur)
+	fmt.Println("vptree(多核cpu生成树的时间):", since.String())
+	cur = time.Now()
 	dis := make([]float64, 0, len(f))
 
 	go func() {
@@ -178,8 +184,8 @@ func vptreeMultiCPU(f []vptree.Comparable, p co) []float64 {
 	}
 	wg.Wait()
 	close(c)
-	since := time.Since(cur)
-	fmt.Println("vptree with multi cpu", since.String())
+	since = time.Since(cur)
+	fmt.Println("vptree(多核cpu查询时间):", since.String())
 	sort.Float64s(dis)
 	return dis
 }
