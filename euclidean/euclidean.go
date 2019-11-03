@@ -7,10 +7,10 @@ import (
 // Distance 距离
 func Distance(a, b []float64) float64 {
 	if len(a) != len(b) {
-		return 1.0
+		return math.MaxFloat64
 	}
 	if len(a) == 0 {
-		return 1.0
+		return 0
 	}
 	var (
 		sum float64
