@@ -21,12 +21,16 @@ func (a co) Distance(b vptree.Comparable) float64 {
 	return euclidean.Distance(a[:], bi[:])
 }
 
-var num = flag.Int("num", 100000, "测试的数据数量")
+var (
+	num = flag.Int("num", 100000, "测试的数据数量")
+	max = flag.Float64("max", 0.162, "vptree查询的最大值")
+)
 
 func main() {
 	flag.Parse()
 	l := *num
-	fmt.Println("num: ", l)
+	k := *max
+	fmt.Println("num:", l, "max:", k)
 	f := make([]vptree.Comparable, l)
 
 	rand.Seed(time.Now().UnixNano())
@@ -80,7 +84,7 @@ func main() {
 	dis = dis[:0]
 	cur = time.Now()
 	t.Do(func(c vptree.Comparable, i int) (done bool) {
-		if n := p.Distance(c); n <= 0.162 {
+		if n := p.Distance(c); n <= k {
 			dis = append(dis, n)
 		}
 		return
@@ -97,7 +101,7 @@ func main() {
 		fmt.Println(d[i])
 	}
 
-	d = vptreeMultiCPU(f, p)
+	d = vptreeMultiCPU(f, p, k)
 	for i := 0; i < 5 && i < len(d); i++ {
 		fmt.Println(d[i])
 	}
@@ -139,7 +143,7 @@ func directMultiCPU(f []vptree.Comparable, p co) []float64 {
 	return dis
 }
 
-func vptreeMultiCPU(f []vptree.Comparable, p co) []float64 {
+func vptreeMultiCPU(f []vptree.Comparable, p co, k float64) []float64 {
 	cur := time.Now()
 	n := runtime.NumCPU()
 	// n := 16
@@ -175,7 +179,7 @@ func vptreeMultiCPU(f []vptree.Comparable, p co) []float64 {
 		go func(t *vptree.Tree, p co, c chan float64) {
 			defer wg.Done()
 			t.Do(func(o vptree.Comparable, i int) (done bool) {
-				if n := p.Distance(o); n <= 0.162 {
+				if n := p.Distance(o); n <= k {
 					c <- n
 				}
 				return
