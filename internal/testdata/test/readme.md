@@ -5,7 +5,7 @@
 ```
 PC: windows10
 cpu: i5-9300H 2.4GHz 4核8线程
-memory: 16GB DDR4
+memory: DDR4 16GB 2400MHz
 ```
 
 - 测试过程
