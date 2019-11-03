@@ -1,11 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"metric/euclidean"
+	"runtime"
 	"sort"
+	"sync"
 	"time"
 
 	"gonum.org/v1/gonum/spatial/vptree"
@@ -18,8 +21,12 @@ func (a co) Distance(b vptree.Comparable) float64 {
 	return euclidean.Distance(a[:], bi[:])
 }
 
+var num = flag.Int("num", 100000, "测试的数据数量")
+
 func main() {
-	l := 100000
+	flag.Parse()
+	l := *num
+	fmt.Println("num: ", l)
 	f := make([]vptree.Comparable, l)
 
 	rand.Seed(time.Now().UnixNano())
@@ -52,13 +59,14 @@ func main() {
 	// }
 	sort.Float64s(p[:])
 	cur := time.Now()
+
 	var dis = make([]float64, 0, l)
 	for i := 0; i < len(f); i++ {
 		dis = append(dis, (f[i].Distance(p)))
 	}
 	sort.Float64s(dis)
 	since := time.Since(cur)
-	fmt.Println(since.String())
+	fmt.Println("direct:", since.String())
 	for i := 0; i < 5; i++ {
 		fmt.Println(dis[i])
 	}
@@ -66,9 +74,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println("len:", t.Len())
 	dis = dis[:0]
-	fmt.Println(dis)
 	cur = time.Now()
 	t.Do(func(c vptree.Comparable, i int) (done bool) {
 		if n := p.Distance(c); n <= 0.162 {
@@ -77,12 +83,105 @@ func main() {
 		return
 	})
 	since = time.Since(cur)
+	fmt.Println("vptree:", since.String())
 	sort.Float64s(dis)
 	for i := 0; i < 5 && i < len(dis); i++ {
 		fmt.Println(dis[i])
 	}
-	fmt.Println(since.String())
 
+	d := directMultiCPU(f, p)
+	for i := 0; i < 5 && i < len(d); i++ {
+		fmt.Println(d[i])
+	}
+
+	d = vptreeMultiCPU(f, p)
+	for i := 0; i < 5 && i < len(d); i++ {
+		fmt.Println(d[i])
+	}
+}
+
+func directMultiCPU(f []vptree.Comparable, p co) []float64 {
+	n := runtime.NumCPU()
+	// n := 16
+	step := len(f) / n
+	wg := new(sync.WaitGroup)
+	c := make(chan float64, 1024)
+	dis := make([]float64, 0, len(f))
+	cur := time.Now()
+	go func() {
+		for d := range c {
+			dis = append(dis, d)
+		}
+	}()
+	for i := 0; i < n; i++ {
+		var a []vptree.Comparable
+		if i == n-1 {
+			a = f[i*step:]
+		} else {
+			a = f[i*step : (i+1)*step]
+		}
+		wg.Add(1)
+		go func(a []vptree.Comparable, p co, c chan float64) {
+			defer wg.Done()
+			for i := 0; i < len(a); i++ {
+				c <- a[i].Distance(p)
+			}
+		}(a, p, c)
+	}
+	wg.Wait()
+	close(c)
+	since := time.Since(cur)
+	fmt.Println("direct with multi cpu", since.String())
+	sort.Float64s(dis)
+	return dis
+}
+
+func vptreeMultiCPU(f []vptree.Comparable, p co) []float64 {
+	n := runtime.NumCPU()
+	// n := 16
+	step := len(f) / n
+	wg := new(sync.WaitGroup)
+	c := make(chan float64, 1024)
+	ts := make([]*vptree.Tree, n)
+	for i := 0; i < n; i++ {
+		var a []vptree.Comparable
+		if i == n-1 {
+			a = f[i*step:]
+		} else {
+			a = f[i*step : (i+1)*step]
+		}
+		t, err := vptree.New(a, 5, nil)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		ts[i] = t
+	}
+	cur := time.Now()
+	dis := make([]float64, 0, len(f))
+
+	go func() {
+		for d := range c {
+			dis = append(dis, d)
+		}
+	}()
+	for i := 0; i < len(ts); i++ {
+		wg.Add(1)
+		go func(t *vptree.Tree, p co, c chan float64) {
+			defer wg.Done()
+			t.Do(func(o vptree.Comparable, i int) (done bool) {
+				if n := p.Distance(o); n <= 0.162 {
+					c <- n
+				}
+				return
+			})
+		}(ts[i], p, c)
+	}
+	wg.Wait()
+	close(c)
+	since := time.Since(cur)
+	fmt.Println("vptree with multi cpu", since.String())
+	sort.Float64s(dis)
+	return dis
 }
 
 var p = co{
