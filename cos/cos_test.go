@@ -8,27 +8,31 @@ import (
 )
 
 var (
-	ai  = testdata.A
-	bi  = testdata.B
-	min = 0.01
-	max = 128
+	ai          = testdata.A
+	bi          = testdata.B
+	min float32 = 0.01
+	max float32 = 128
 )
 
 func TestMain(m *testing.M) {
-	sort.Float64s(ai[:])
-	sort.Float64s(bi[:])
+	sort.Slice(ai[:], func(i, j int) bool {
+		return ai[i] < ai[j]
+	})
+	sort.Slice(bi[:], func(i, j int) bool {
+		return bi[j] < bi[j]
+	})
 	m.Run()
 }
 
 func TestSimilarity(t *testing.T) {
 	type args struct {
-		a []float64
-		b []float64
+		a []float32
+		b []float32
 	}
 	tests := []struct {
 		name string
 		args args
-		want float64
+		want float32
 	}{
 		{
 			name: "1",
@@ -36,31 +40,29 @@ func TestSimilarity(t *testing.T) {
 				a: ai[:],
 				b: bi[:],
 			},
-			want: 0.99,
+			want: 1.94,
 		},
 		{
 			name: "2",
 			args: args{
-				a: []float64{1, 1, 2, 1.0, 1, 1, 0, 0, 0},
-				b: []float64{1, 1, 1, 0, 1, 1, 1, 1, 1},
+				a: []float32{1, 1, 2, 1.0, 1, 1, 0, 0, 0},
+				b: []float32{1, 1, 1, 0, 1, 1, 1, 1, 1},
 			},
-			want: 0.71,
+			want: 1.189,
 		},
 		{
 			name: "3",
 			args: args{
-				a: []float64{5, 0, 1, 3},
-				b: []float64{6, 0, 0, 2},
+				a: []float32{5, 0, 1, 3},
+				b: []float32{6, 0, 0, 2},
 			},
-			want: 0.962,
+			want: 2.41,
 		},
 	}
 	for _, tt := range tests {
-		// sort.Float64s(tt.args.a)
-		// sort.Float64s(tt.args.b)
 		t.Run(tt.name, func(t *testing.T) {
 			got := Similarity(tt.args.a, tt.args.b)
-			if !(math.Abs(got-tt.want) < min) {
+			if !(float32(math.Abs(float64(got-tt.want))) < min) {
 				t.Errorf("Similarity() = %v, want %v", got, tt.want)
 			}
 		})

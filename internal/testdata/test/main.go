@@ -14,11 +14,11 @@ import (
 	"gonum.org/v1/gonum/spatial/vptree"
 )
 
-type co [128]float64
+type co [128]float32
 
 func (a co) Distance(b vptree.Comparable) float64 {
 	bi := b.(co)
-	return euclidean.Distance(a[:], bi[:])
+	return float64(euclidean.Distance(a[:], bi[:]))
 }
 
 var (
@@ -37,9 +37,11 @@ func main() {
 	for i := 0; i < l; i++ {
 		var fi co
 		for j := 0; j < 128; j++ {
-			fi[j] = rand.Float64()
+			fi[j] = rand.Float32()
 		}
-		sort.Float64s(fi[:])
+		sort.Slice(fi[:], func(i, j int) bool {
+			return fi[i] < fi[j]
+		})
 		f[i] = vptree.Comparable(fi)
 	}
 	// b, err := json.MarshalIndent(f, "", " ")
@@ -61,7 +63,9 @@ func main() {
 	// 		fmt.Println(sig.String())
 	// 	}
 	// }
-	sort.Float64s(p[:])
+	sort.Slice(p[:], func(i, j int) bool {
+		return p[i] < p[j]
+	})
 	cur := time.Now()
 
 	var dis = make([]float64, 0, l)

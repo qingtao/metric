@@ -1,2 +1,3 @@
 data.json
 *.exe
+internal/testdata/test/test

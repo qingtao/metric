@@ -8,27 +8,31 @@ import (
 )
 
 var (
-	ai  = testdata.A
-	bi  = testdata.B
-	min = 0.01
-	max = 128
+	ai          = testdata.A
+	bi          = testdata.B
+	min float32 = 0.01
+	max float32 = 128
 )
 
 func TestMain(m *testing.M) {
-	sort.Float64s(ai[:])
-	sort.Float64s(bi[:])
+	sort.Slice(ai[:], func(i, j int) bool {
+		return ai[i] < ai[j]
+	})
+	sort.Slice(bi[:], func(i, j int) bool {
+		return bi[j] < bi[j]
+	})
 	m.Run()
 }
 
 func TestDistance(t *testing.T) {
 	type args struct {
-		a []float64
-		b []float64
+		a []float32
+		b []float32
 	}
 	tests := []struct {
 		name string
 		args args
-		want float64
+		want float32
 	}{
 		{
 			name: "1",
@@ -36,15 +40,13 @@ func TestDistance(t *testing.T) {
 				a: ai[:],
 				b: bi[:],
 			},
-			want: 0.455,
+			want: 4.83,
 		},
 	}
 	for _, tt := range tests {
-		// sort.Float64s(tt.args.a)
-		// sort.Float64s(tt.args.b)
 		t.Run(tt.name, func(t *testing.T) {
 			got := Distance(tt.args.a, tt.args.b)
-			if !(math.Abs(got-tt.want) < min) {
+			if !(float32(math.Abs(float64(got-tt.want))) < min) {
 				t.Errorf("Distance() = %v, want %v", got, tt.want)
 			}
 		})
